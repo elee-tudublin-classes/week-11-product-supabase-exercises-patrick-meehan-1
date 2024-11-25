@@ -18,13 +18,18 @@ templates = Jinja2Templates(directory="app/view_templates")
 # return the todos page
 @router.get("/", response_class=HTMLResponse)
 async def getProducts(request: Request):
+    # Fetch products with category names
+    data = supabase.from_("product").select("id, title, description, stock, price, thumbnail, category(name)").execute()
+    products = data.data
 
-    products = getAllProducts()
-    categories = getAllCategories()
+    # Fetch all categories (if needed)
+    categories = supabase.from_("category").select("*").execute().data
 
-    # note passing of parameters to the page
-    return templates.TemplateResponse("product/products.html", {"request": request, "products": products, "categories": categories })
-
+    # Pass products and categories to the template
+    return templates.TemplateResponse(
+        "product/products.html",
+        {"request": request, "products": products, "categories": categories},
+    )
 @router.get("/update/{id}", response_class=HTMLResponse)
 async def getProfuctUpdateForm(request: Request, id: int):
 
@@ -50,3 +55,9 @@ def postProduct(request: Request, productData: Annotated[Product, Form()]) :
 def delProduct(request: Request, id: int):
     deleteProduct(id)
     return templates.TemplateResponse("product/partials/product_list.html", {"request": request, "products": getAllProducts()})
+
+@router.get("/filter", response_class=HTMLResponse)
+async def filterProducts(request: Request, category_id: int):
+    data = supabase.from_("product").select("id, title, description, stock, price, thumbnail, category(name)").eq("category_id", category_id).execute()
+    products = data.data
+    return templates.TemplateResponse("/product/partials/product_list.html", {"request": request, "products": products})
